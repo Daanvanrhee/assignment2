@@ -8,6 +8,7 @@
 
 #include "arrivals.h"
 #include "intersection_time.h"
+
 #include "input.h"
 
 /* 
@@ -19,6 +20,13 @@
  *   ordered in the same order as they arrived
  */
 static Arrival curr_arrivals[4][3][20];
+int handled_arrivals = 0;
+/*
+ * lock
+ *
+ * A mutex that is used to lock the intersection
+ */
+pthread_mutex_t lock; // Declare a mutex
 
 /*
  * semaphores[][]
@@ -66,21 +74,35 @@ static void* supply_arrivals()
  */
 static void* manage_light(void* arg)
 {
-  // TODO:
-  // while not all arrivals have been handled, repeatedly:
-  //  - wait for an arrival using the semaphore for this traffic light
-  //  - lock the right mutex(es)
-  //  - make the traffic light turn green
-  //  - sleep for CROSS_TIME seconds
-  //  - make the traffic light turn red
-  //  - unlock the right mutex(es)
-
-  return(0);
+  Arrival* arrival = (Arrival*)arg;
+  int car_id = arrival->id;
+  Side side = arrival->side;
+  Direction direction = arrival->direction;
+  int total_cars = sizeof(input_arrivals) / sizeof(Arrival);
+  while (true)
+  {
+    sem_wait(&semaphores[side][direction]);
+    pthread_mutex_lock(&lock);
+    printf("traffic light %d %d turns green at time %d for car %d\n", side, direction, get_time_passed(), car_id);
+    sleep(CROSS_TIME);
+    printf("traffic light %d %d turns red at time %d\n", side, direction, get_time_passed());
+    handled_arrivals++;
+    pthread_mutex_unlock(&lock);  
+    if (handled_arrivals == total_cars)
+    {
+      exit(0);
+    }
+  }
+  return NULL;
 }
-
 
 int main(int argc, char * argv[])
 {
+  printf("Program started\n");
+  
+
+  pthread_mutex_init(&lock, NULL);
+
   // create semaphores to wait/signal for arrivals
   for (int i = 0; i < 4; i++)
   {
@@ -89,17 +111,31 @@ int main(int argc, char * argv[])
       sem_init(&semaphores[i][j], 0, 0);
     }
   }
+  pthread_t light_threads[4][3];
+  for (int i = 0; i < 4; i++)
+  {
+    for (int j = 0; j < 3; j++)
+    {
+      pthread_create(&light_threads[i][j], NULL, manage_light, (void*)&input_arrivals[i]);
+    }
+  }
 
-  // TODO: create a thread per traffic light that executes manage_light
-
-  // start the timer
   start_time();
 
-  // TODO: create a thread that executes supply_arrivals
+  pthread_t supply_thread;
+  pthread_create(&supply_thread, NULL, supply_arrivals, NULL);
+  for (int i = 0; i < 4; i++)
+  {
+    for (int j = 0; j < 3; j++)
+    {
+      pthread_join(light_threads[i][j], NULL);
+      printf("All cars have crossed the intersection\n");
 
-  // TODO: wait for all threads to finish
+    }
 
-  // destroy semaphores
+  }
+  pthread_join(supply_thread, NULL);
+
   for (int i = 0; i < 4; i++)
   {
     for (int j = 0; j < 3; j++)
@@ -107,4 +143,8 @@ int main(int argc, char * argv[])
       sem_destroy(&semaphores[i][j]);
     }
   }
+
+  pthread_mutex_destroy(&lock);
+
+  return 0;
 }

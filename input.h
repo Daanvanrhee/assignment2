@@ -9,4 +9,5 @@
 // the array of arrivals for the intersection
 const Arrival input_arrivals[] = {{0, NORTH, STRAIGHT, 0}, {1, SOUTH, LEFT, 1}, {2, EAST, STRAIGHT, 7}, {3, WEST, RIGHT, 13}};
 
+
 #endif
