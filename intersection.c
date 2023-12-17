@@ -97,10 +97,7 @@ static void* manage_light(void* arg)
 }
 
 int main(int argc, char * argv[])
-{
-  printf("Program started\n");
-  
-
+{ 
   pthread_mutex_init(&lock, NULL);
 
   // create semaphores to wait/signal for arrivals
