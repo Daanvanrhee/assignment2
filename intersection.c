@@ -117,6 +117,7 @@ int main(int argc, char * argv[])
   }
 
   start_time();
+
   pthread_t supply_thread;
   pthread_create(&supply_thread, NULL, supply_arrivals, NULL);
 
@@ -125,8 +126,6 @@ int main(int argc, char * argv[])
   {
     pthread_join(light_threads[i], NULL);
   }
-
-  printf("All cars have crossed the intersection\n");
 
   // Wait for supply_thread to finish
   pthread_join(supply_thread, NULL);
